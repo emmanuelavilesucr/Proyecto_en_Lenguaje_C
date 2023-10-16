@@ -28,15 +28,14 @@ int main(int argc, char *argv[]) {
     const char *output = "output.png";
 
 
-    if ((flag_rotacion_png == 1) && (flag_convolucion_png == 1)){
+    if (flag_rotacion_png == 1) {
         rotarPNG(input, output);
-
-    } if ((flag_rotacion_jpg == 1) && (flag_convolucion_jpg == 1)){
+  } if (flag_rotacion_jpg == 1) {
         rotarJPEG(input, output);
-    } else {
+    }else {
         fprintf(stderr, "Formato no compatible. Utilice 'jpeg' o 'png'.\n");
         return 1;
-    }
-
+	}
+  
     return 0;
 }
