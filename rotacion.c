@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <jpeglib.h>
-#include <stdio.h>
 #include <png.h>
 
 // Esta función se encarga del manejo de errores del programa.
@@ -70,15 +69,102 @@ void rotarJPEG(const char *input, const char *output, int degrees) {
 
 }
 
-void rotarPNG(const char *input, const char *output) {
-    // Código para rotar imágenes PNG
 
+// Esta función es la encargada de rotar imagenes PNG
 
+void rotarPNG(const char *input, const char *output, int degrees) {
+	/* Declarar punteros utilizados para el archivo de entrada */
+	png_structp input_png_ptr; 
+	png_infop input_info_ptr;
+	
+	/* Abrir archivo de entrada */
+	FILE *input_image = fopen(input, "rb");
+	if (!input_image) {
+        return error_exit("Error al abrir archivos de entrada o salida");
+    }
+
+	/* Definir puntero a un png_struct para el archivo de entrada */
+	input_png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!input_png_ptr){
+		fclose(input_image);
+		return error_exit("Error al rotar la imagen.");
+	}
+
+	/* Definir puntero a un png_info para el archivo de entrada*/
+	input_info_ptr = png_create_info_struct(input_png_ptr);
+	if (!input_info_ptr)
+	{
+		fclose(input_image);
+		png_destroy_read_struct(&input_png_ptr, NULL, NULL);
+		return error_exit("Error al rotar la imagen.");
+	}
+	
+	/* Inicializacion I/O para el archivo de entrada */
+	png_init_io(input_png_ptr, input_image);
+	
+	/* Leer informacion del archivo de entrada */
+	png_read_info(input_png_ptr, input_info_ptr);
+	
+	/* Definicion de datos importantes acerca de la imagen */
+    int ancho = png_get_image_width(input_png_ptr, input_info_ptr);
+    int altura = png_get_image_height(input_png_ptr, input_info_ptr);
+    int bit_depth = png_get_bit_depth(input_png_ptr, input_info_ptr);
+    int tipo_color = png_get_color_type(input_png_ptr, input_info_ptr);
+	
+	/* libpng solo admite imagenes png con bith depth de 8 con color RGBA */
+   if (bit_depth != 8 || tipo_color != PNG_COLOR_TYPE_RGBA) {
+        fclose(input_image);
+        png_destroy_read_struct(&input_png_ptr, &input_info_ptr, NULL);
+        return error_exit("Error al rotar la imagen");
+    }
+
+	/* Liberar el espacio en memoria utilizado por los structs de tipo
+	 * png_struct y png_info para el archivo de entrada */
+    png_destroy_read_struct(&input_png_ptr, &input_info_ptr, NULL);
+	
+	/* Declarar punteros utilizados para el archivo de salida */
+	png_structp output_png_ptr;
+	png_infop output_info_ptr;
+
+	/* Abrir archivo de salida */
+    FILE *output_image = fopen(output, "wb");
+    if (!output_image) {
+        fclose(input_image);
+        return error_exit("Error al rotar la imagen.");
+    }
+	
+	/* Definir puntero a un png_struct para el archivo de salida */
+    output_png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!output_png_ptr) {
+        fclose(input_image);
+        fclose(output_image);
+        return error_exit("Error al rotar la imagen.");
+    }
+	
+	/* Definir puntero a un png_info para el archivo de salida */
+    output_info_ptr = png_create_info_struct(output_png_ptr);
+    if (!output_info_ptr) {
+        fclose(input_image);
+        fclose(output_image);
+        png_destroy_write_struct(&output_png_ptr, NULL);
+        return error_exit("Error al rotar la imagen");
+    }
+	
+	/* Inicializacion I/O para el archivo de salida */
+    png_init_io(output_png_ptr, output_image);
+    png_set_IHDR(output_png_ptr, output_info_ptr, altura, ancho, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    
+	// Algoritmo de rotacion
+	
+    fclose(input_image);
+    fclose(output_image);
+    png_destroy_write_struct(&output_png_ptr, &output_info_ptr);
 }
 
+// main
 int main(int argc, char *argv[]) {
     if (argc != 4) {
-        fprintf(stderr, "Uso: %s <archivo_entrada> <archivo_salida> <grados>\n", argv[0]); // Muestra un mensaje de uso al usuario.
+        fprintf(stderr, "Uso: %s <archivo_entrada> <archivo_salida> <grados>\n", argv[0]); 		  // Muestra un mensaje de uso al usuario.
         return EXIT_FAILURE;
     }
 
@@ -86,9 +172,11 @@ int main(int argc, char *argv[]) {
     const char *output = argv[2];
     int degrees = atoi(argv[3]);
 
-    rotarJPEG(input, output, degrees); // Llama a la funcion.
+    //rotarJPEG(input, output, degrees); 
+	rotarPNG(input, output, degrees);
     printf("Imagen rotada y guardada como %s\n", output);
 
     return EXIT_SUCCESS;
 }
+
 
