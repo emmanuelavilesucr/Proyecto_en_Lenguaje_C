@@ -72,7 +72,7 @@ void rotarJPEG(const char *input, const char *output, int degrees) {
 
 // Esta función es la encargada de rotar imagenes PNG
 
-void rotarPNG(const char *input, const char *output, int degrees) {
+void rotarPNG(const char *input, const char *output) {
 	/* Declarar punteros utilizados para el archivo de entrada */
 	png_structp input_png_ptr; 
 	png_infop input_info_ptr;
@@ -92,8 +92,7 @@ void rotarPNG(const char *input, const char *output, int degrees) {
 
 	/* Definir puntero a un png_info para el archivo de entrada*/
 	input_info_ptr = png_create_info_struct(input_png_ptr);
-	if (!input_info_ptr)
-	{
+	if (!input_info_ptr){
 		fclose(input_image);
 		png_destroy_read_struct(&input_png_ptr, NULL, NULL);
 		return error_exit("Error al rotar la imagen.");
@@ -117,7 +116,18 @@ void rotarPNG(const char *input, const char *output, int degrees) {
         png_destroy_read_struct(&input_png_ptr, &input_info_ptr, NULL);
         return error_exit("Error al rotar la imagen");
     }
+	
+   	/* Definir puntero para las líneas de pixeles en el png */
+	png_bytep fila_ptr[altura];
+    for (int y = 0; y < altura; y++) {
+		/* Asignar espacio en memoria para el puntero fila_ptr */
+       	fila_ptr[y] = (png_bytep) malloc(png_get_rowbytes(input_png_ptr, input_info_ptr));
+    }
 
+    for (int y = 0; y < altura; y++) {
+        png_read_row(input_png_ptr, fila_ptr[y], NULL);
+    }	
+	
 	/* Liberar el espacio en memoria utilizado por los structs de tipo
 	 * png_struct y png_info para el archivo de entrada */
     png_destroy_read_struct(&input_png_ptr, &input_info_ptr, NULL);
@@ -152,13 +162,37 @@ void rotarPNG(const char *input, const char *output, int degrees) {
 	
 	/* Inicializacion I/O para el archivo de salida */
     png_init_io(output_png_ptr, output_image);
-    png_set_IHDR(output_png_ptr, output_info_ptr, altura, ancho, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	/* invierte ancho y altura */
+    png_set_IHDR(output_png_ptr, output_info_ptr, ancho, altura, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
     
 	// Algoritmo de rotacion
+ 	
+	/* Escribir al archivo de salida */
+	png_write_info(output_png_ptr, output_info_ptr);
 	
-    fclose(input_image);
+	/* Iterar sobre los pixeles leidos del archivo de entrada e invertirlos 
+	 * para el archivo de salida */
+    for (int x = 0; x < ancho; x++) {
+        for (int y = altura - 1; y >= 0; y--) {
+            png_write_row(output_png_ptr, &(fila_ptr[y][x]));
+        }
+    }
+	
+	/* Detener escritura al archivo de salida */
+    png_write_end(output_png_ptr, NULL);
+
+	/* Cerrar archivo de salida */
     fclose(output_image);
-    png_destroy_write_struct(&output_png_ptr, &output_info_ptr);
+	fclose(input_image);
+
+	/* Liberar memoria almacenada en fila_ptr */
+    for (int y = 0; y < altura; y++) {
+        free(fila_ptr[y]);
+    }
+	
+	/* Liberar el espacio en memoria utilizado por los structs de tipo
+	 * png_struct y png_info para el archivo de salida */ 
+    png_destroy_write_struct(&output_png_ptr, &output_info_ptr);	
 }
 
 // main
@@ -173,7 +207,7 @@ int main(int argc, char *argv[]) {
     int degrees = atoi(argv[3]);
 
     //rotarJPEG(input, output, degrees); 
-	rotarPNG(input, output, degrees);
+	rotarPNG(input, output);
     printf("Imagen rotada y guardada como %s\n", output);
 
     return EXIT_SUCCESS;
