@@ -2,73 +2,96 @@
 #include <stdlib.h>
 #include <jpeglib.h>
 #include <png.h>
+#include <string.h>
 
-// Esta función se encarga del manejo de errores del programa.
+// Esta funcion esta encargada del manejo de errores del programa.
 
 void error_exit(const char *message) {
     fprintf(stderr, "%s\n", message);
     exit(EXIT_FAILURE);
 }
-
-// Esta función es la encargada de rotar imagenes JPEG.
+ 
+// Funcion encargada del proceso de rotacion de imagenes de formato JPEG.
 
 void rotarJPEG(const char *input, const char *output, int degrees) {
+    if (degrees != 180) {
+        error_exit("Angulo invalido. Este programa solo acepta una rotacion de 180 grados."); // Este mensaje se muestra en caso de ingresar un angulo diferente a 180 grados
+    }
+
     struct jpeg_decompress_struct cinfo;
-    struct jpeg_compress_struct output_cinfo;
+    struct jpeg_compress_struct jinfo;
     struct jpeg_error_mgr jerr;
 
-    JSAMPROW row_pointer[1];
     FILE *input_image = fopen(input, "rb");
-    FILE *output_image = fopen(output, "wb");
-
-    if (!input_image || !output_image) {
-        error_exit("Error al abrir archivos de entrada o salida");
-    }
+    if (!input_image) {                                          // Abrir archivo de entrada
+        error_exit("Error al abrir la imagen de entrada");
+    } 
 
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_decompress(&cinfo);
-    output_cinfo.err = jpeg_std_error(&jerr);
-    jpeg_create_compress(&output_cinfo);
-
-    jpeg_stdio_src(&cinfo, input_image);             // Establece el archivo de entrada
-    jpeg_stdio_dest(&output_cinfo, output_image);    // Establece el archivo de salida
-
+    jpeg_stdio_src(&cinfo, input_image);
     jpeg_read_header(&cinfo, TRUE);
-    cinfo.dct_method = JDCT_ISLOW;
     jpeg_start_decompress(&cinfo);
 
-    output_cinfo.image_width = cinfo.output_height;
-    output_cinfo.image_height = cinfo.output_width;
-    output_cinfo.input_components = cinfo.output_components;
-    output_cinfo.in_color_space = cinfo.out_color_space;
-    jpeg_set_defaults(&output_cinfo);
-    jpeg_start_compress(&output_cinfo, TRUE);
+    int width = cinfo.output_width;
+    int height = cinfo.output_height;
+    int num_components = cinfo.output_components;
 
-    row_pointer[0] = (JSAMPROW)malloc(cinfo.output_width * cinfo.output_components); // Reserva una espacio en memoria para almacenar los pixeles.
+    unsigned char *row = (unsigned char*)malloc(num_components *width);
 
-    // Esta estructura es la encargada de leer y rotar las filas de píxeles.
-    while (cinfo.output_scanline < cinfo.output_height) {
-        int i;
-        int offset = cinfo.output_scanline - 1;
-        jpeg_read_scanlines(&cinfo, row_pointer, 1);
-        for (i = 0; i < cinfo.output_width; i++) {
-            int row = i * cinfo.output_components;
-            int col = offset * cinfo.output_width * cinfo.output_components;
-            jpeg_write_scanlines(&output_cinfo, &row_pointer[0], 1);
+    FILE *output_image = fopen(output, "wb");
+    if (!output_image) {                       // Abrir archivo de salida
+        jpeg_finish_decompress(&cinfo);
+        jpeg_destroy_decompress(&cinfo);
+        fclose(input_image);
+        free(row);
+        error_exit("Error al abrir las imagen de salida");
+    }
+
+    jinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&jinfo);
+    jpeg_stdio_dest(&jinfo, output_image);
+
+    // Configuracion de la estructura
+    jinfo.image_width = width;
+    jinfo.image_height = height;
+    jinfo.input_components = num_components;
+    jinfo.in_color_space = cinfo.out_color_space;
+    jpeg_set_defaults(&jinfo);
+    jpeg_set_quality(&jinfo, 100, TRUE);
+    jpeg_start_compress(&jinfo, TRUE);
+
+    // Algoritmo encargo de realizar la rotacion de 180 grados de la imagen.
+
+    if (degrees == 180) {
+        unsigned char *rotated_image = (unsigned char *)malloc(num_components * width * height);
+        int row_size = num_components * width;
+        int row_index = 0;
+
+        while (cinfo.output_scanline < cinfo.output_height) {
+            jpeg_read_scanlines(&cinfo, &row, 1);
+            memcpy(rotated_image + row_index, row, row_size);
+            row_index += row_size;
+        }
+
+        for (int i = 0; i < height; i++) {
+            row_index = (height - i - 1) * row_size;
+            row = rotated_image + row_index;
+            jpeg_write_scanlines(&jinfo, &row, 1);
         }
     }
 
-    jpeg_finish_compress(&output_cinfo);  // Finaliza el proceso de compresion de la imagen.
-
-    // Libera los recursos empleados en el programa.
+    // Finaliza el proceso de compresión de la imagen
+    jpeg_finish_compress(&jinfo);
+    jpeg_destroy_compress(&jinfo);
+    jpeg_finish_decompress(&cinfo); 
     jpeg_destroy_decompress(&cinfo);
-    jpeg_destroy_compress(&output_cinfo);
-    free(row_pointer[0]);
+
+    // Libera la memoria utilizada
     fclose(input_image);
     fclose(output_image);
-
+    free(row);
 }
-
 
 // Esta función es la encargada de rotar imagenes PNG
 
@@ -207,8 +230,11 @@ int main(int argc, char *argv[]) {
     int degrees = atoi(argv[3]);
 
     //rotarJPEG(input, output, degrees); 
-	rotarPNG(input, output);
-    printf("Imagen rotada y guardada como %s\n", output);
+    rotarPNG(input, output);
+    printf("La imagen fue rotada y guardada como %s\n", output);
+
+    rotarJPEG(input, output, degrees);  // Llama a la funcion encargada de rotar el jpeg
+    printf("La imagen fue rotada y guardada como %s\n", output);
 
     return EXIT_SUCCESS;
 }
