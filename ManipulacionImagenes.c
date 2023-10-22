@@ -222,14 +222,14 @@ void rotarPNG(const char *input, const char *output) {
 int main(int argc, char *argv[]) {
 // si se necesita ayuda
     if (argc > 1 && strcmp(argv[1], "-h") == 0) {
-        printf("Pasos para manipular un archivo .png o .jpg:\n\n");
+        printf("Pasos para manipular un archivo .png o .jpeg:\n\n");
         printf("- Para elegir el archivo a manipular: '-i' 'nombre del archivo a manipular'.\n");
         printf("- Si desea agregar un nombre al nuevo archivo manipulado: '-i' 'nombre del archivo a manipular' '-o' 'nombre del archivo manipulado'.\n");
         return 0; // Salir después de mostrar la ayuda.
     } 
 //Flags para los algoritmos
     int flag_rotacion_png = 0;
-    int flag_rotacion_jpg = 0;
+    int flag_rotacion_jpeg = 0;
 
 
 //Nombre en defecto de la imagen manipulada
@@ -240,11 +240,11 @@ int main(int argc, char *argv[]) {
             if (strstr(argv[2], ".png") != NULL) {
                 flag_rotacion_png = 1;
              
-            } else if (strstr(argv[2], ".jpg") != NULL) {
-                flag_rotacion_jpg = 1;
+            } else if (strstr(argv[2], ".jpeg") != NULL) {
+                flag_rotacion_jpeg = 1;
          
             } else {
-                printf("El string no termina en '.png' ni en '.jpg'.\n");
+                printf("El string no termina en '.png' ni en '.jpeg'.\n");
             }
             if (argc > 4 && strcmp(argv[3], "-o") == 0 && (argv[4])) {
                 strcpy(imagen_manipulada, argv[4]);
@@ -262,12 +262,12 @@ int main(int argc, char *argv[]) {
 	rotarPNG(argv[2], imagen_manipulada);
     	printf("Realizando manipulaciones a la imagen PNG.\nEl nombre de la nueva imagen es: %s\n", imagen_manipulada);
    
-    }if ((flag_rotacion_jpg == 1)){
+    }if ((flag_rotacion_jpeg == 1)){
 
 	int degrees = 180; //Grados para el funcionamiento de la funcion
 	//Invocar funciones para jpg
         rotarJPEG(argv[2], imagen_manipulada, degrees);
-        printf("Realizando manipulaciones a la imagen JPG.\nEl nombre de la nueva imagen es: %s\n", imagen_manipulada);
+        printf("Realizando manipulaciones a la imagen JPEG.\nEl nombre de la nueva imagen es: %s\n", imagen_manipulada);
     }
     return 0;
 }

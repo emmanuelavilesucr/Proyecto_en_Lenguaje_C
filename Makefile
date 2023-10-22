@@ -13,8 +13,8 @@ TARGET: rotar
 #Reglas
 
 rotar: ManipulacionImagenes.c
-	$(CC) $(CDFLAGS) $(LDFLAG1) $(LDFLAG2) -o $@ ManipulacionImagenes.c
-	echo "Se ha compilado el programa de manera exitosa"
+	$(CC) $(CDFLAGS) -o $@ ManipulacionImagenes.c -I/usr/include/libjpeg -I/usr/include $(LDFLAG1) $(LDFLAG2) -lz
+	@echo "Se ha compilado el programa de manera exitosa"
 
 # Regla para limpiar (borrar) archivos generados
 .PHONY: clean
